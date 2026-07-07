@@ -144,7 +144,7 @@ JSON Schema:
             }
             if (response.status >= 500 || response.status === 429) {
               lastError = `Google Error (${response.status}): ${errMsg}`;
-              await new Promise(r => setTimeout(r, 1500)); // wait 1.5 sec before retry
+              await new Promise(r => setTimeout(r, 500)); // wait 0.5 sec before retry
               continue; // try same model again
             }
             
