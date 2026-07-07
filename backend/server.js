@@ -177,7 +177,7 @@ JSON Schema:
           };
         }
         
-        console.log(`[Gemini] ✅ Success with ${m.api}/${m.name}`);
+        console.log(`[Gemini] ✅ Success`);
         
         // Fetch YouTube videoId if action is PLAY_MUSIC
         if (data.action === 'PLAY_MUSIC' && data.searchQuery) {
