@@ -108,7 +108,7 @@ JSON Schema:
     // All Gemini API keys (AIzaSy format) use ?key= query param
     const models = [
       { api: 'v1beta', name: 'gemini-1.5-flash' },
-      { api: 'v1beta', name: 'gemini-1.5-flash-8b' }
+      { api: 'v1beta', name: 'gemini-pro' } // Safe fallback model
     ];
 
     let lastError = 'All models failed';
@@ -160,7 +160,8 @@ JSON Schema:
     // End of models loop
 
     if (!responseText) {
-      throw new Error(lastError || 'Failed to get response from Gemini API');
+      console.error('[Gemini API Final Error]', lastError);
+      throw new Error('Google servers are currently overloaded. Please try again in a few seconds.');
     }
 
     responseText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
