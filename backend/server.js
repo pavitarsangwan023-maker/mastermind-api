@@ -107,39 +107,62 @@ JSON Schema:
 
     // All Gemini API keys (AIzaSy format) use ?key= query param
     const models = [
-      { api: 'v1beta', name: 'gemini-2.5-flash' },
-      { api: 'v1beta', name: 'gemini-flash-latest' }
+      { api: 'v1beta', name: 'gemini-1.5-flash-8b' }, // Fastest, highest limit
+      { api: 'v1beta', name: 'gemini-1.5-flash' },
+      { api: 'v1beta', name: 'gemini-1.5-pro' }
     ];
 
     let lastError = 'All models failed';
+    let responseText = null;
 
     for (const m of models) {
+      if (responseText) break;
       const url = `https://generativelanguage.googleapis.com/${m.api}/models/${m.name}:generateContent`;
-      console.log(`[Gemini] Trying ${m.api}/${m.name}...`);
+      
+      // Try each model up to 2 times if 503 occurs
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        console.log(`[Gemini] Trying ${m.api}/${m.name} (Attempt ${attempt})...`);
 
-      try {
-        let response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey.trim() },
-          body: JSON.stringify(requestBody)
-        });
+        try {
+          let response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey.trim() },
+            body: JSON.stringify(requestBody)
+          });
 
-        let body = await response.json();
+          let body = await response.json();
 
-        if (!response.ok) {
-          const errMsg = body?.error?.message || `HTTP ${response.status}`;
-          console.warn(`[Gemini] ${m.name} → ${response.status}: ${errMsg.substring(0, 120)}`);
+          if (!response.ok) {
+            const errMsg = body?.error?.message || `HTTP ${response.status}`;
+            console.warn(`[Gemini] ${m.name} → ${response.status}: ${errMsg.substring(0, 120)}`);
 
-          if (response.status === 401 || response.status === 403) {
-            return res.status(401).json({ success: false, error: 'API_KEY_INVALID: Your API key is invalid or expired.' });
+            if (response.status === 401 || response.status === 403) {
+              return res.status(401).json({ success: false, error: 'API_KEY_INVALID: Your API key is invalid or expired.' });
+            }
+            if (response.status === 503) {
+              lastError = 'Google Gemini Server is overloaded (503). Retrying...';
+              await new Promise(r => setTimeout(r, 1000)); // wait 1 sec before retry
+              continue; // try same model again
+            }
+            
+            lastError = response.status === 429 ? `QUOTA_EXCEEDED: Free quota exhausted.` : errMsg;
+            break; // Break inner loop, move to next model
           }
-          lastError = response.status === 429 ? `QUOTA_EXCEEDED: Free quota exhausted.` : errMsg;
-          continue;
-        }
 
-        let responseText = body.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        responseText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-        
+          responseText = body.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          break; // Success! Break inner loop
+        } catch (error) {
+          console.error(`[Gemini] Fetch error on ${m.name}:`, error);
+          lastError = error.message;
+          break; // Network error, try next model
+        }
+      }
+    }
+    if (!responseText) {
+      throw new Error(lastError || 'Failed to get response from Gemini API');
+    }
+
+    responseText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
         let data;
         try {
           data = JSON.parse(responseText);
