@@ -107,8 +107,8 @@ JSON Schema:
 
     // All Gemini API keys (AIzaSy format) use ?key= query param
     const models = [
-      { api: 'v1beta', name: 'gemini-1.5-flash' }, // Best balance of speed and intelligence
-      { api: 'v1beta', name: 'gemini-1.5-pro' }    // Most intelligent (fallback)
+      { api: 'v1beta', name: 'gemini-1.5-flash-latest' },
+      { api: 'v1beta', name: 'gemini-1.5-pro-latest' }
     ];
 
     let lastError = 'All models failed';
@@ -118,8 +118,8 @@ JSON Schema:
       if (responseText) break;
       const url = `https://generativelanguage.googleapis.com/${m.api}/models/${m.name}:generateContent`;
       
-      // Try each model up to 2 times if 503 occurs
-      for (let attempt = 1; attempt <= 2; attempt++) {
+      // Try each model up to 3 times if server is busy
+      for (let attempt = 1; attempt <= 3; attempt++) {
         console.log(`[Gemini] Trying ${m.api}/${m.name} (Attempt ${attempt})...`);
 
         try {
@@ -138,14 +138,14 @@ JSON Schema:
             if (response.status === 401 || response.status === 403) {
               return res.status(401).json({ success: false, error: 'API_KEY_INVALID: Your API key is invalid or expired.' });
             }
-            if (response.status === 503) {
-              lastError = 'Google Gemini Server is overloaded (503). Retrying...';
-              await new Promise(r => setTimeout(r, 1000)); // wait 1 sec before retry
+            if (response.status >= 500 || response.status === 429) {
+              lastError = `Google Gemini Server is busy (${response.status}). Retrying...`;
+              await new Promise(r => setTimeout(r, 1500)); // wait 1.5 sec before retry
               continue; // try same model again
             }
             
-            lastError = response.status === 429 ? `QUOTA_EXCEEDED: Free quota exhausted.` : errMsg;
-            break; // Break inner loop, move to next model
+            lastError = errMsg;
+            break; // Break inner loop for other errors (400, 404), move to next model
           }
 
           responseText = body.candidates?.[0]?.content?.parts?.[0]?.text || '';
