@@ -143,7 +143,7 @@ JSON Schema:
               return res.status(401).json({ success: false, error: 'API_KEY_INVALID: Your API key is invalid or expired.' });
             }
             if (response.status >= 500 || response.status === 429) {
-              lastError = `Google Gemini Server is busy (${response.status}). Retrying...`;
+              lastError = `Google Error (${response.status}): ${errMsg}`;
               await new Promise(r => setTimeout(r, 1500)); // wait 1.5 sec before retry
               continue; // try same model again
             }
