@@ -104,10 +104,10 @@ JSON Schema:
         responseMimeType: "application/json"
       },
       safetySettings: [
-        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
+        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
+        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
+        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" }
       ]
     };
 
@@ -167,7 +167,7 @@ JSON Schema:
 
     if (!responseText) {
       console.error('[Gemini API Final Error]', lastError);
-      throw new Error('Google servers are currently overloaded. Please try again in a few seconds.');
+      throw new Error(`Google Error: ${lastError}`);
     }
 
     responseText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
