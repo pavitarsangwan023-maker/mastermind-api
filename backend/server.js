@@ -157,12 +157,14 @@ JSON Schema:
         }
       }
     }
+    // End of models loop
+
     if (!responseText) {
       throw new Error(lastError || 'Failed to get response from Gemini API');
     }
 
     responseText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-        let data;
+    let data;
         try {
           data = JSON.parse(responseText);
         } catch (parseErr) {
@@ -193,15 +195,7 @@ JSON Schema:
         // --- Increment Quota ---
         globalQuota.count++;
         
-        return res.json({ success: true, modelUsed: `${m.api}/${m.name}`, ...data });
-
-      } catch (err) {
-        console.warn(`[Gemini] ${m.name} fetch error:`, err.message);
-        lastError = err.message;
-      }
-    }
-
-    return res.status(500).json({ success: false, error: lastError });
+    return res.json({ success: true, modelUsed: 'gemini-1.5', ...data });
 
 
   } catch (err) {
