@@ -107,8 +107,8 @@ JSON Schema:
 
     // All Gemini API keys (AIzaSy format) use ?key= query param
     const models = [
-      { api: 'v1beta', name: 'gemini-1.5-flash-latest' },
-      { api: 'v1beta', name: 'gemini-1.5-pro-latest' }
+      { api: 'v1beta', name: 'gemini-1.5-flash' },
+      { api: 'v1beta', name: 'gemini-1.5-flash-8b' }
     ];
 
     let lastError = 'All models failed';
