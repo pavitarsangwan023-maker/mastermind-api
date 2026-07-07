@@ -111,10 +111,8 @@ JSON Schema:
       ]
     };
 
-    // Using the real, fastest Gemini models to eliminate 404 fallback latency
     const models = [
-      { api: 'v1beta', name: 'gemini-1.5-flash' }, // Instant response (fastest)
-      { api: 'v1beta', name: 'gemini-pro' }       // Safe fallback
+      { api: 'v1beta', name: 'gemini-1.5-flash' }
     ];
 
     let lastError = 'All models failed';
