@@ -107,9 +107,8 @@ JSON Schema:
 
     // All Gemini API keys (AIzaSy format) use ?key= query param
     const models = [
-      { api: 'v1beta', name: 'gemini-1.5-flash-8b' }, // Fastest, highest limit
-      { api: 'v1beta', name: 'gemini-1.5-flash' },
-      { api: 'v1beta', name: 'gemini-1.5-pro' }
+      { api: 'v1beta', name: 'gemini-1.5-flash' }, // Best balance of speed and intelligence
+      { api: 'v1beta', name: 'gemini-1.5-pro' }    // Most intelligent (fallback)
     ];
 
     let lastError = 'All models failed';
