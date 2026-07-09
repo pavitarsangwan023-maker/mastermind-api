@@ -112,7 +112,9 @@ JSON Schema:
     };
 
     const models = [
-      { api: 'v1beta', name: 'gemini-flash-latest' }
+      { api: 'v1beta', name: 'gemini-1.5-flash-latest' },
+      { api: 'v1beta', name: 'gemini-1.5-flash-8b-latest' },
+      { api: 'v1beta', name: 'gemini-1.5-pro-latest' }
     ];
 
     let lastError = 'All models failed';
