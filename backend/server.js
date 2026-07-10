@@ -90,22 +90,34 @@ app.post('/api/ai/chat', async (req, res) => {
            searchQuery: query
        });
     }
-    // ============================================================
+    // 4. FAST TIME
+    if (lowerText.match(/^(time kya|kya time|samay kya|time batao|what is the time|current time)/)) {
+       const now = new Date();
+       let hours = now.getHours();
+       let minutes = now.getMinutes();
+       const ampm = hours >= 12 ? 'PM' : 'AM';
+       hours = hours % 12;
+       hours = hours ? hours : 12; 
+       const timeStr = `${hours} bajkar ${minutes} minute ho rahe hain.`;
+       return res.json({ success: true, aiResponse: `Sir, abhi ${timeStr}`, action: "CHAT" });
+    }
 
-    let extraContext = '';
+    // 5. FAST WEATHER
     if (lowerText.includes('weather') || lowerText.includes('mausam') || lowerText.includes('baarish') || lowerText.includes('dhup') || lowerText.includes('मौसम') || lowerText.includes('तापमान') || lowerText.includes('वेदर')) {
       try {
-        console.log('[Context Injector] Fetching live weather...');
-        // Defaulting to Ghaziabad / Arthala context since that's where the user is
         let loc = (lowerText.includes('arthala') || lowerText.includes('अर्थला')) ? 'Arthala,Ghaziabad' : 'Ghaziabad';
         const wRes = await fetch(`https://wttr.in/${loc}?format=3`);
         if (wRes.ok) {
-          extraContext = `\n[LIVE SYSTEM DATA]: The current live weather in ${loc} is ${await wRes.text()}. Please include this in your conversational response.`;
+           const wText = await wRes.text();
+           return res.json({ success: true, aiResponse: `Sir, ${loc} ka live weather hai: ${wText.replace('+', '')}.`, action: "CHAT" });
         }
       } catch (e) {
-        console.warn('[Context Injector] Weather fetch failed.');
+        console.warn('Weather fetch failed.');
       }
     }
+    // ============================================================
+
+    let extraContext = '';
 
     // --- Quota Tracker ---
     let todayDate = new Date().toISOString().split('T')[0];
