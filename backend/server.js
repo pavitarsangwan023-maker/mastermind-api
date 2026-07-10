@@ -53,7 +53,7 @@ app.post('/api/ai/chat', async (req, res) => {
     const lowerText = text.toLowerCase();
     
 // 1. FAST STOP
-    if (lowerText.match(/(?:\b|\s)(stop|chup|band kar|ruko|hatao|बंद|चुप|रुक|स्टॉप|रुक जाओ)(?:\b|\s|$)/i) || lowerText === 'stop' || lowerText === 'chiku stop' || lowerText === 'चीकू स्टॉप') {
+    if (lowerText.match(/(stop|chup|band kar|ruko|hatao|बंद|चुप|रुक|स्टॉप|रुक जाओ)/i)) {
        return res.json({ success: true, aiResponse: "Thik hai, band kar diya.", action: "STOP_MUSIC" });
     }
 
