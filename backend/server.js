@@ -53,24 +53,28 @@ app.post('/api/ai/chat', async (req, res) => {
     const lowerText = text.toLowerCase();
     
     // 1. FAST STOP
-    if (lowerText.match(/^(stop|chup|band kar|ruko|hatao)$/)) {
+    if (lowerText.match(/^(stop|chup|band kar|ruko|hatao|बंद|चुप|रुक)$/)) {
        return res.json({ success: true, aiResponse: "Thik hai, band kar diya.", action: "STOP_MUSIC" });
     }
 
     // 2. FAST REMINDERS
-    const reminderMatch = lowerText.match(/(remind me|reminder|yaad dila).*?(\d+)\s*(sec|second|min|minute|hr|hour)/) || lowerText.match(/(\d+)\s*(sec|second|min|minute|hr|hour).*?(remind|yaad dila)/);
+    const reminderRegex = /(remind me|reminder|yaad dila|याद दिला|रिमाइंडर).*?(\d+)\s*(sec|second|min|minute|hr|hour|सेकंड|मिनट|घंट)/i;
+    const reminderRegexRev = /(\d+)\s*(sec|second|min|minute|hr|hour|सेकंड|मिनट|घंट).*?(remind|yaad dila|याद दिला|रिमाइंडर)/i;
+    
+    const reminderMatch = lowerText.match(reminderRegex) || lowerText.match(reminderRegexRev);
     if (reminderMatch) {
        let num = parseInt(reminderMatch[2] || reminderMatch[1]);
-       let unit = (reminderMatch[3] || reminderMatch[2]);
+       let unit = (reminderMatch[3] || reminderMatch[2]).toLowerCase();
        let delayMs = 0;
-       if (unit.startsWith('sec')) delayMs = num * 1000;
-       else if (unit.startsWith('min')) delayMs = num * 60 * 1000;
-       else if (unit.startsWith('hr') || unit.startsWith('hour')) delayMs = num * 60 * 60 * 1000;
+       if (unit.startsWith('sec') || unit.startsWith('सेक')) delayMs = num * 1000;
+       else if (unit.startsWith('min') || unit.startsWith('मिन')) delayMs = num * 60 * 1000;
+       else if (unit.startsWith('hr') || unit.startsWith('hour') || unit.startsWith('घंट')) delayMs = num * 60 * 60 * 1000;
        
        if (delayMs > 0) {
+           let safeUnit = unit.startsWith('सेक') ? 'second' : (unit.startsWith('मिन') ? 'minute' : (unit.startsWith('घंट') ? 'hour' : unit));
            return res.json({
                success: true,
-               aiResponse: `Thik hai ${userTitle}, main aapko ${num} ${unit} baad yaad dila dungi.`,
+               aiResponse: `Thik hai ${userTitle}, main aapko ${num} ${safeUnit} baad yaad dila dungi.`,
                action: "REMINDER",
                reminderDelayMs: delayMs
            });
@@ -78,10 +82,9 @@ app.post('/api/ai/chat', async (req, res) => {
     }
 
     // 3. FAST MUSIC
-    const musicMatch = lowerText.match(/(play|gaana chalao|song|music)\s*(.*?)$/) || lowerText.match(/^(.*?)\s*(play|gaana chalao|song|music)$/);
-    if (musicMatch && (lowerText.includes('play') || lowerText.includes('gaana') || lowerText.includes('song'))) {
-       // Filter out common verbs to get query
-       let query = lowerText.replace(/play|gaana chalao|gaana sunna|song|music|sunao|chalao/g, '').trim();
+    const musicMatch = lowerText.match(/(play|gaana chalao|song|music|गाना|सुनाओ|चलाओ|बजाओ)\s*(.*?)$/i) || lowerText.match(/^(.*?)\s*(play|gaana chalao|song|music|गाना|सुनाओ|चलाओ|बजाओ)/i);
+    if (musicMatch && (lowerText.includes('play') || lowerText.includes('gaana') || lowerText.includes('song') || lowerText.includes('गाना') || lowerText.includes('सुनाओ'))) {
+       let query = lowerText.replace(/play|gaana chalao|gaana sunna|song|music|sunao|chalao|बजाओ|सुनाओ|गाना|मुझे|कि|चाहता/g, '').trim();
        if (!query) query = "latest hindi songs";
        return res.json({
            success: true,
@@ -90,12 +93,12 @@ app.post('/api/ai/chat', async (req, res) => {
            searchQuery: query
        });
     }
+
     // 4. FAST TIME
-    if (lowerText.match(/^(time kya|kya time|samay kya|time batao|what is the time|current time)/)) {
+    if (lowerText.match(/^(time kya|kya time|samay kya|time batao|what is the time|current time|समय क्या|क्या टाइम|टाइम बताओ)/i)) {
        const now = new Date();
        let hours = now.getHours();
        let minutes = now.getMinutes();
-       const ampm = hours >= 12 ? 'PM' : 'AM';
        hours = hours % 12;
        hours = hours ? hours : 12; 
        const timeStr = `${hours} bajkar ${minutes} minute ho rahe hain.`;
@@ -103,7 +106,7 @@ app.post('/api/ai/chat', async (req, res) => {
     }
 
     // 5. FAST WEATHER
-    if (lowerText.includes('weather') || lowerText.includes('mausam') || lowerText.includes('baarish') || lowerText.includes('dhup') || lowerText.includes('मौसम') || lowerText.includes('तापमान') || lowerText.includes('वेदर')) {
+    if (lowerText.match(/weather|mausam|baarish|dhup|मौसम|तापमान|वेदर/i)) {
       try {
         let loc = (lowerText.includes('arthala') || lowerText.includes('अर्थला')) ? 'Arthala,Ghaziabad' : 'Ghaziabad';
         const wRes = await fetch(`https://wttr.in/${loc}?format=3`);
@@ -169,8 +172,7 @@ JSON Schema:
     };
 
     const models = [
-      { api: 'v1beta', name: 'gemini-1.5-flash' },
-      { api: 'v1beta', name: 'gemini-1.5-flash-8b' }
+      { api: 'v1beta', name: 'gemini-1.5-flash' }
     ];
 
     let lastError = 'Google Gemini servers are currently overloaded. Please wait a moment and try again.';
