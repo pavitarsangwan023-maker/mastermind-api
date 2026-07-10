@@ -145,11 +145,13 @@ JSON Schema:
             }
             if (response.status >= 500 || response.status === 429) {
               // Server busy, wait 2 seconds and retry
+              lastError = `Google Error (${response.status}): Servers overloaded.`;
               await new Promise(r => setTimeout(r, 2000));
               continue; 
             }
             
-            // For other errors (like 404), break inner loop and try next model
+            // Capture the EXACT error for 400 Bad Request
+            lastError = `Google Error (${response.status}): ${errMsg}`;
             break; 
           }
 
