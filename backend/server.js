@@ -53,7 +53,7 @@ app.post('/api/ai/chat', async (req, res) => {
     const lowerText = text.toLowerCase();
     
     // 1. FAST STOP
-    if (lowerText.match(/^(stop|chup|band kar|ruko|hatao|बंद|चुप|रुक)$/)) {
+    if (lowerText.match(/(stop|chup|band kar|ruko|hatao|बंद|चुप|रुक)/)) {
        return res.json({ success: true, aiResponse: "Thik hai, band kar diya.", action: "STOP_MUSIC" });
     }
 
@@ -175,11 +175,15 @@ JSON Schema:
       { api: 'v1beta', name: 'gemini-1.5-flash' }
     ];
 
+
     let lastError = 'Google Gemini servers are currently overloaded. Please wait a moment and try again.';
     let responseText = null;
 
-    for (const m of models) {
+    let dynamicModels = [...models];
+
+    for (let i = 0; i < dynamicModels.length; i++) {
       if (responseText) break;
+      const m = dynamicModels[i];
       const url = `https://generativelanguage.googleapis.com/${m.api}/models/${m.name}:generateContent`;
       
       // Try each model up to 2 times
@@ -202,24 +206,44 @@ JSON Schema:
             if (response.status === 401 || response.status === 403) {
               return res.status(401).json({ success: false, error: 'API_KEY_INVALID: Your API key is invalid or expired.' });
             }
+            
+            // DYNAMIC DISCOVERY ON 404 (Model Not Found)
+            if (response.status === 404 && errMsg.includes('not found') && i === dynamicModels.length - 1) {
+                console.log(`[Gemini] Model 404. Attempting dynamic discovery...`);
+                try {
+                    const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey.trim()}`);
+                    const listData = await listRes.json();
+                    if (listData.models) {
+                        const available = listData.models.filter(mdl => mdl.name.includes('gemini') && mdl.supportedGenerationMethods.includes('generateContent'));
+                        if (available.length > 0) {
+                            const newModelName = available[0].name.replace('models/', '');
+                            console.log(`[Gemini] Dynamically found model: ${newModelName}. Retrying...`);
+                            dynamicModels.push({ api: 'v1beta', name: newModelName });
+                            lastError = `Discovered ${newModelName}`;
+                            break; // break inner attempt loop, outer loop will continue with the new model
+                        }
+                    }
+                } catch(e) {
+                    console.log('Dynamic discovery failed:', e.message);
+                }
+            }
+
             if (response.status >= 500 || response.status === 429) {
-              // Server busy, wait 2 seconds and retry
               lastError = `Google Error (${response.status}): Servers overloaded.`;
               await new Promise(r => setTimeout(r, 2000));
               continue; 
             }
             
-            // Capture the EXACT error for 400 Bad Request
             lastError = `Google Error (${response.status}): ${errMsg}`;
             break; 
           }
 
           responseText = body.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          break; // Success! Break inner loop
+          break; // Success!
         } catch (error) {
            console.error(`[Gemini] Fetch error on ${m.name}:`, error);
           lastError = error.message;
-          break; // Network error, try next model
+          break; // Network error
         }
       }
     }
