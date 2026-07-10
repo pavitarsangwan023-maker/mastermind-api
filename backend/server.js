@@ -58,8 +58,8 @@ app.post('/api/ai/chat', async (req, res) => {
     }
 
     // 2. FAST REMINDERS
-    const reminderRegex = /(remind me|reminder|yaad dila|याद दिला|रिमाइंडर).*?(\d+)\s*(sec|second|min|minute|hr|hour|सेकंड|मिनट|घंट)/i;
-    const reminderRegexRev = /(\d+)\s*(sec|second|min|minute|hr|hour|सेकंड|मिनट|घंट).*?(remind|yaad dila|याद दिला|रिमाइंडर)/i;
+    const reminderRegex = /(remind me|reminder|yaad dila|याद दिला|रिमाइंडर)[\s\S]*?(\d+)\s*(sec|second|min|minute|hr|hour|सेकंड|मिनट|घंट)/i;
+    const reminderRegexRev = /(\d+)\s*(sec|second|min|minute|hr|hour|सेकंड|मिनट|घंट)[\s\S]*?(remind|yaad dila|याद दिला|रिमाइंडर)/i;
     
     const reminderMatch = lowerText.match(reminderRegex) || lowerText.match(reminderRegexRev);
     if (reminderMatch) {
