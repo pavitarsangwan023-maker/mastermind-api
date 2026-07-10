@@ -113,19 +113,18 @@ JSON Schema:
 
     const models = [
       { api: 'v1beta', name: 'gemini-1.5-flash' },
-      { api: 'v1beta', name: 'gemini-1.5-flash-8b' },
-      { api: 'v1beta', name: 'gemini-pro' }
+      { api: 'v1beta', name: 'gemini-1.5-flash-8b' }
     ];
 
-    let lastError = 'All models failed';
+    let lastError = 'Google Gemini servers are currently overloaded. Please wait a moment and try again.';
     let responseText = null;
 
     for (const m of models) {
       if (responseText) break;
       const url = `https://generativelanguage.googleapis.com/${m.api}/models/${m.name}:generateContent`;
       
-      // Try each model up to 3 times if server is busy
-      for (let attempt = 1; attempt <= 3; attempt++) {
+      // Try each model up to 2 times
+      for (let attempt = 1; attempt <= 2; attempt++) {
         console.log(`[Gemini] Trying ${m.api}/${m.name} (Attempt ${attempt})...`);
 
         try {
@@ -145,19 +144,19 @@ JSON Schema:
               return res.status(401).json({ success: false, error: 'API_KEY_INVALID: Your API key is invalid or expired.' });
             }
             if (response.status >= 500 || response.status === 429) {
-              lastError = `Google Error (${response.status}): ${errMsg}`;
-              await new Promise(r => setTimeout(r, 500)); // wait 0.5 sec before retry
-              continue; // try same model again
+              // Server busy, wait 2 seconds and retry
+              await new Promise(r => setTimeout(r, 2000));
+              continue; 
             }
             
-            lastError = errMsg;
-            break; // Break inner loop for other errors (400, 404), move to next model
+            // For other errors (like 404), break inner loop and try next model
+            break; 
           }
 
           responseText = body.candidates?.[0]?.content?.parts?.[0]?.text || '';
           break; // Success! Break inner loop
         } catch (error) {
-          console.error(`[Gemini] Fetch error on ${m.name}:`, error);
+           console.error(`[Gemini] Fetch error on ${m.name}:`, error);
           lastError = error.message;
           break; // Network error, try next model
         }
