@@ -208,8 +208,8 @@ JSON Schema:
               return res.status(401).json({ success: false, error: 'API_KEY_INVALID: Your API key is invalid or expired.' });
             }
             
-            // DYNAMIC DISCOVERY ON 404 (Model Not Found)
-            if (response.status === 404 && errMsg.includes('not found') && i === dynamicModels.length - 1) {
+// DYNAMIC DISCOVERY ON 404 (Model Not Found or No Longer Available)
+            if (response.status === 404 && (errMsg.includes('not found') || errMsg.includes('no longer available')) && i === dynamicModels.length - 1) {
                 console.log(`[Gemini] Model 404. Attempting dynamic discovery...`);
                 try {
                     const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey.trim()}`);
