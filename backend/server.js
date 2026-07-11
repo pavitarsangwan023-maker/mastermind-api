@@ -29,7 +29,7 @@ app.get('/api/quota', (req, res) => {
     globalQuota.date = todayDate;
     globalQuota.count = 0;
   }
-  res.json({ usage: globalQuota.count, limit: 1500 });
+  res.json({ usage: globalQuota.count, limit: 10000 });
 });
 
 // ============================================================
@@ -131,8 +131,8 @@ app.post('/api/ai/chat', async (req, res) => {
     let apiUsageToday = globalQuota.count;
 
     if (lowerText.includes('limit') || lowerText.includes('kitni bachi') || lowerText.includes('quota')) {
-      const remaining = 1500 - apiUsageToday;
-      extraContext += `\n[LIVE SYSTEM DATA]: The user is asking about their daily API limit. Tell them they have consumed ${apiUsageToday} requests today, and have ${remaining} requests remaining out of their 1500 free limit. Reassure them this is plenty.`;
+      const remaining = 10000 - apiUsageToday;
+      extraContext += `\n[LIVE SYSTEM DATA]: The user is asking about their daily API limit. Tell them they have consumed ${apiUsageToday} requests today, and have ${remaining} requests remaining out of their 10000 limit. Reassure them this is plenty.`;
     }
 
 const systemPrompt = `You are Mastermind, an advanced AI Personal Assistant, but you also act as the user's close companion or virtual girlfriend if they initiate personal talk. You call the user ${userTitle || 'Sir'}.
