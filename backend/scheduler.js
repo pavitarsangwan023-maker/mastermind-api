@@ -1,58 +1,83 @@
 const cron = require('node-cron');
-const Memory = require('./models/Memory');
+const { Expo } = require('expo-server-sdk');
+const Reminder = require('./models/Reminder');
+const User = require('./models/User');
 
-// This function starts the background scheduler
+const expo = new Expo();
+
 const startScheduler = () => {
   console.log("Mastermind Scheduler Started...");
 
-  // Runs every minute to check for reminders
-  // In a real app, 'node-cron' would be installed. Using setInterval simulation here.
+  // Check every 60 seconds
   setInterval(async () => {
     try {
       console.log("[Scheduler] Checking memory for pending reminders...");
       
-      // Real logic: Find memories where category is 'reminders' and time <= now
-      // const pendingReminders = await Memory.find({ category: 'reminders', isCompleted: false });
-      
-      // Simulate finding a reminder
-      const foundReminder = {
-        _id: 'rem_12345',
-        userText: 'Mujhe kal subah 9 baje meeting yaad dilana',
-        aiResponse: 'Meeting time is up!',
-        snoozeCount: 0
-      };
+      const now = new Date();
+      // Find reminders that are due or overdue, and are still PENDING
+      const pendingReminders = await Reminder.find({ 
+          dueDate: { $lte: now }, 
+          status: 'PENDING' 
+      });
 
-      if (foundReminder) {
-        triggerSmartVoiceAlert(foundReminder);
+      if (pendingReminders.length === 0) return;
+
+      console.log(`[Scheduler] Found ${pendingReminders.length} pending reminders!`);
+
+      // Group reminders by userEmail to avoid spamming the database
+      for (const reminder of pendingReminders) {
+          try {
+              const user = await User.findOne({ email: reminder.userEmail });
+              if (user && user.expoPushToken && Expo.isExpoPushToken(user.expoPushToken)) {
+                  // Send Push Notification
+                  const spokenMessage = generateVoicePrompt(reminder.taskText);
+                  
+                  let messages = [{
+                    to: user.expoPushToken,
+                    sound: 'default',
+                    priority: 'high',
+                    title: 'Mastermind Reminder ⏰',
+                    body: spokenMessage,
+                    data: { action: 'REMINDER_ALARM', text: spokenMessage },
+                  }];
+                  
+                  let chunks = expo.chunkPushNotifications(messages);
+                  for (let chunk of chunks) {
+                      await expo.sendPushNotificationsAsync(chunk);
+                  }
+                  
+                  console.log(`🔊 Push Notification sent to ${user.email} for reminder: ${reminder.taskText}`);
+              } else {
+                  console.log(`⚠️ Push token not found or invalid for user: ${reminder.userEmail}`);
+              }
+              
+              // Mark as completed regardless so it doesn't loop infinitely
+              reminder.status = 'COMPLETED';
+              await reminder.save();
+              
+          } catch (err) {
+              console.error("[Scheduler Error on specific reminder]", err);
+          }
       }
 
     } catch (error) {
       console.error("[Scheduler Error]", error);
     }
-  }, 60000); // Check every 60 seconds
+  }, 60000); 
 };
 
 // Generates a smart, context-aware spoken message based on the task
 const generateVoicePrompt = (taskText) => {
   if (taskText.toLowerCase().includes('meeting')) {
     return `Sir, time ho gaya hai. Aapki meeting shuru hone wali hai.`;
-  } else if (taskText.toLowerCase().includes('dawai') || taskText.toLowerCase().includes('medicine')) {
+  } else if (taskText.toLowerCase().includes('dawai') || taskText.toLowerCase().includes('medicine') || taskText.toLowerCase().includes('pills')) {
     return `Sir, aapki dawai lene ka time ho gaya hai. Kripya apna khayal rakhein.`;
   } else if (taskText.toLowerCase().includes('call')) {
     return `Sir, aapko ek zaroori call karni thi. Time ho gaya hai.`;
   } else {
     // Default smart response
-    return `Sir, aapne mujhe yaad dilane ko kaha tha: ${taskText}`;
+    return `Sir, aapka time ho gaya hai. Aapne kaha tha: ${taskText}`;
   }
-};
-
-const triggerSmartVoiceAlert = (reminder) => {
-  const spokenMessage = generateVoicePrompt(reminder.userText);
-  console.log(`\n🔊 [AI VOICE ALERT TRIGGERED]`);
-  console.log(`Sending TTS Command to Phone: "${spokenMessage}"`);
-  
-  // In a real app, this sends the exact string `spokenMessage` via push notification.
-  // The React Native app receives it and immediately plays it via expo-speech / TTS.
 };
 
 module.exports = { startScheduler };
