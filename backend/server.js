@@ -172,8 +172,10 @@ JSON Schema:
       ]
     };
 
-    const models = [
-      { api: 'v1beta', name: 'gemini-1.5-flash' }
+const models = [
+      { api: 'v1beta', name: 'gemini-1.5-flash' },
+      { api: 'v1beta', name: 'gemini-1.5-pro' },
+      { api: 'v1beta', name: 'gemini-pro' }
     ];
 
 
@@ -229,10 +231,10 @@ JSON Schema:
                 }
             }
 
-            if (response.status >= 500 || response.status === 429) {
-              lastError = `Google Error (${response.status}): Servers overloaded.`;
-              await new Promise(r => setTimeout(r, 2000));
-              continue; 
+if (response.status >= 500 || response.status === 429) {
+              lastError = `Google Error (${response.status}): Servers overloaded. Trying another model...`;
+              console.warn(lastError);
+              break; // Break attempt loop to move to the NEXT model immediately
             }
             
             lastError = `Google Error (${response.status}): ${errMsg}`;
