@@ -21,6 +21,36 @@ app.get('/', (req, res) => {
 let globalQuota = { date: new Date().toISOString().split('T')[0], count: 0 };
 
 // ============================================================
+// SECRET BOX API ROUTES
+// ============================================================
+const SecretNote = require('./models/SecretNote');
+
+app.post('/api/secrets', async (req, res) => {
+  const { email, content } = req.body;
+  if (!email || !content) return res.status(400).json({ success: false, error: 'Missing data' });
+  
+  try {
+    const newNote = new SecretNote({ userEmail: email, content });
+    await newNote.save();
+    res.json({ success: true, message: 'Secret saved.' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/secrets', async (req, res) => {
+  const { email } = req.query;
+  if (!email) return res.status(400).json({ success: false, error: 'Missing email' });
+  
+  try {
+    const notes = await SecretNote.find({ userEmail: email }).sort({ createdAt: -1 });
+    res.json({ success: true, secrets: notes });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ============================================================
 // USER PUSH TOKEN ROUTE
 // ============================================================
 const User = require('./models/User');
