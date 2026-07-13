@@ -36,7 +36,7 @@ const startScheduler = () => {
                     to: user.expoPushToken,
                     sound: 'default',
                     priority: 'high',
-                    title: 'Mastermind Reminder ⏰',
+                    title: reminder.taskText.length > 40 ? reminder.taskText.substring(0, 40) + '...' : reminder.taskText,
                     body: spokenMessage,
                     data: { action: 'REMINDER_ALARM', text: spokenMessage },
                   }];
