@@ -111,23 +111,22 @@ app.post('/api/ai/chat', async (req, res) => {
        return res.json({ success: true, aiResponse: "Thik hai, band kar diya.", action: "STOP_MUSIC" });
     }
 
-    // 2. FAST REMINDERS
-    const reminderRegex = /(remind me|reminder|yaad dila|याद दिला|रिमाइंडर|रिमाइंड|alarm|अलार्म)[\s\S]*?(\d+)\s*(sec|second|min|minute|hr|hour|day|सेकंड|मिनट|घंट|दिन)/i;
-    const reminderRegexRev = /(\d+)\s*(sec|second|min|minute|hr|hour|day|सेकंड|मिनट|घंट|दिन)[\s\S]*?(remind|yaad dila|याद दिला|रिमाइंडर|रिमाइंड|alarm|अलार्म)/i;
+    // 2. FAST REMINDERS — catches all Hindi/Hinglish patterns
+    // e.g. "10 minute baad yaad dila dena", "mujhe 5 min baad remind karna", "1 hour baad alarm lagao"
+    const reminderKeywords = /(remind|yaad dila|याद दिला|रिमाइंड|alarm|अलार्म|timer|time set|notification)/i;
+    const timePattern = /(\d+)\s*(sec(?:ond)?s?|min(?:ute)?s?|hr?s?|hour?s?|days?|सेकंड|मिनट|घंट[ेा]?|दिन)/i;
     
-    let reminderMatch = lowerText.match(reminderRegex);
+    let reminderMatch = null;
     let num = 0;
     let unit = "";
     
-    if (reminderMatch) {
-       num = parseInt(reminderMatch[2]);
-       unit = reminderMatch[3].toLowerCase();
-    } else {
-       reminderMatch = lowerText.match(reminderRegexRev);
-       if (reminderMatch) {
-           num = parseInt(reminderMatch[1]);
-           unit = reminderMatch[2].toLowerCase();
-       }
+    if (reminderKeywords.test(lowerText) && timePattern.test(lowerText)) {
+      const timeMatch = lowerText.match(timePattern);
+      if (timeMatch) {
+        reminderMatch = timeMatch;
+        num = parseInt(timeMatch[1]);
+        unit = timeMatch[2].toLowerCase();
+      }
     }
     
     if (reminderMatch && !isNaN(num)) {
@@ -258,9 +257,10 @@ JSON Schema:
     };
 
 const models = [
+      { api: 'v1beta', name: 'gemini-2.0-flash-lite' },   // Fastest & cheapest
+      { api: 'v1beta', name: 'gemini-2.0-flash' },
       { api: 'v1beta', name: 'gemini-1.5-flash' },
-      { api: 'v1beta', name: 'gemini-1.5-pro' },
-      { api: 'v1beta', name: 'gemini-pro' }
+      { api: 'v1beta', name: 'gemini-1.5-pro' }
     ];
 
 
