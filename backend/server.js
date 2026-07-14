@@ -180,7 +180,7 @@ app.post('/api/ai/chat', async (req, res) => {
 
           return res.json({
             success: true,
-            aiResponse: `Bilkul ${userTitle || 'Sir'}! Main aapko ${num} ${unitLabel} baad yaad dila dungi. Aap jo bhi karein, main ek dam sahi time par bolunga.`,
+            aiResponse: `Bilkul ${userTitle || 'Sir'}! Main aapko ${num} ${unitLabel} baad yaad dila dungi. Aap jo bhi karein, main ek dam sahi time par bolungi.`,
             action: "REMINDER",
             reminderDelayMs: delayMs
           });
