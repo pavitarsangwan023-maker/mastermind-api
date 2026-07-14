@@ -280,17 +280,18 @@ JSON Response Schema:
 
       try {
         console.log(`[Gemini] Trying ${m.name}...`);
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 seconds STRICT timeout
-
-        const response = await fetch(url, {
+        
+        const fetchPromise = fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey.trim() },
-          body: JSON.stringify(requestBody),
-          signal: controller.signal
+          body: JSON.stringify(requestBody)
         });
-        clearTimeout(timeoutId);
 
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Request Timeout')), 4000)
+        );
+
+        const response = await Promise.race([fetchPromise, timeoutPromise]);
         const body = await response.json();
 
         if (!response.ok) {
