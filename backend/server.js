@@ -388,6 +388,13 @@ const { startScheduler } = require('./scheduler');
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Mastermind Server v3.0 running on port ${PORT}`);
   startScheduler();
+
+  // Self-Ping to prevent Render.com deep sleep cold starts
+  setInterval(() => {
+    fetch('https://mastermind-api-xwjn.onrender.com/')
+      .then(res => console.log('[Keep-Alive] Ping successful:', res.status))
+      .catch(err => console.log('[Keep-Alive] Ping failed:', err.message));
+  }, 1000 * 60 * 5); // Every 5 minutes
 });
 
 mongoose.connect(MONGO_URI)
