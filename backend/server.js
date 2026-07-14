@@ -138,7 +138,7 @@ app.post('/api/ai/chat', async (req, res) => {
     // 1. STOP command
     if (lowerText.match(/^(stop|chup|band kar|ruko|hatao|ruk|chup ho|बंद|चुप|रुक|स्टॉप)$/i) || 
         (lowerText.split(' ').length <= 4 && lowerText.match(/(stop|chup|band|hatao|ruk)/))) {
-      return res.json({ success: true, aiResponse: "Thik hai, band kar diya.", action: "STOP_MUSIC" });
+      return res.json({ success: true, aiResponse: "ठीक है सर, मैंने बंद कर दिया है।", action: "STOP_MUSIC" });
     }
 
     // 2. FAST TIME
@@ -146,12 +146,11 @@ app.post('/api/ai/chat', async (req, res) => {
       const now = new Date();
       let h = now.getHours() % 12 || 12;
       let m = now.getMinutes().toString().padStart(2, '0');
-      const ampm = now.getHours() >= 12 ? 'PM' : 'AM';
-      return res.json({ success: true, aiResponse: `${userTitle || 'Sir'}, abhi ${h}:${m} ${ampm} baj rahe hain.`, action: "CHAT" });
+      const ampm = now.getHours() >= 12 ? 'दोपहर के' : 'सुबह के'; // rough mapping for better TTS
+      return res.json({ success: true, aiResponse: `${userTitle || 'सर'}, अभी ${h} बज कर ${m} मिनट हुए हैं।`, action: "CHAT" });
     }
 
-    // 3. FAST REMINDER — catches ALL Hindi/Hinglish patterns
-    // "10 minute baad yaad dila dena", "mujhe 5 min baad remind karo", "2 hour ka alarm lagao"
+    // 3. FAST REMINDER
     const reminderKeywords = /(remind|yaad dila|याद दिला|रिमाइंड|alarm|अलार्म|time set|timer|notification|bata dena baad me|baad me batana)/i;
     const timePattern = /(\d+)\s*(sec(?:ond)?s?|min(?:ute)?s?|h(?:r|our)s?|days?|घंट[ेा]?|मिनट|सेकंड|दिन)/i;
     
@@ -161,26 +160,22 @@ app.post('/api/ai/chat', async (req, res) => {
         const num = parseInt(tMatch[1]);
         const rawUnit = tMatch[2].toLowerCase();
         let delayMs = 0;
-        if (rawUnit.match(/^sec|सेकंड/)) delayMs = num * 1000;
-        else if (rawUnit.match(/^min|मिनट/)) delayMs = num * 60 * 1000;
-        else if (rawUnit.match(/^h|घंट/)) delayMs = num * 3600 * 1000;
-        else if (rawUnit.match(/^day|दिन/)) delayMs = num * 86400 * 1000;
-
-        const unitLabel = rawUnit.match(/^sec|सेकंड/) ? 'second' : rawUnit.match(/^min|मिनट/) ? 'minute' : rawUnit.match(/^h|घंट/) ? 'hour' : 'day';
+        let unitLabelHindi = '';
+        if (rawUnit.match(/^sec|सेकंड/)) { delayMs = num * 1000; unitLabelHindi = 'सेकंड'; }
+        else if (rawUnit.match(/^min|मिनट/)) { delayMs = num * 60 * 1000; unitLabelHindi = 'मिनट'; }
+        else if (rawUnit.match(/^h|घंट/)) { delayMs = num * 3600 * 1000; unitLabelHindi = 'घंटे'; }
         
         if (delayMs > 0) {
-          // Save reminder to DB if email provided
           if (email) {
             try {
               const dueDate = new Date(Date.now() + delayMs);
               await new Reminder({ userEmail: email, taskText: text, dueDate }).save();
-              console.log(`[DB] Reminder saved for ${email} at ${dueDate}`);
-            } catch (e) { console.warn('[DB] Reminder save failed:', e.message); }
+            } catch (e) {}
           }
 
           return res.json({
             success: true,
-            aiResponse: `Bilkul ${userTitle || 'Sir'}! Main aapko ${num} ${unitLabel} baad yaad dila dungi. Aap jo bhi karein, main ek dam sahi time par bolungi.`,
+            aiResponse: `बिल्कुल ${userTitle || 'सर'}! मैं आपको ${num} ${unitLabelHindi} बाद याद दिला दूंगी। आप अपना काम कीजिये, मैं एकदम सही समय पर आपको बता दूंगी।`,
             action: "REMINDER",
             reminderDelayMs: delayMs
           });
