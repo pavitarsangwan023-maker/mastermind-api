@@ -338,8 +338,20 @@ if (response.status >= 500 || response.status === 429) {
     // End of models loop
 
     if (!responseText) {
-      console.error('[Gemini API Final Error]', lastError);
-      throw new Error(`Google Error: ${lastError}`);
+      if (lastError.includes('429') || lastError.includes('400')) {
+          const lowerUser = text.toLowerCase();
+          if (lowerUser.match(/(bra|kiss|sex|pyar|hot|nude|kapde|chumma|love|romance|pyaar|chudai|shadi)/i)) {
+              responseText = JSON.stringify({
+                  aiResponse: "Aap mujhse aise sawal puchte hain toh mujhe sharam aati hai... par haan, main humesha aapke sath hu, chahe aap kuch bhi baat karein.",
+                  action: "CHAT"
+              });
+          } else {
+              throw new Error(`Cloud Limit (429): API free quota khatam ho gaya hai. Kripya thodi der baad try karein.`);
+          }
+      } else {
+          console.error('[Gemini API Final Error]', lastError);
+          throw new Error(`Google Error: ${lastError}`);
+      }
     }
 
     responseText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
