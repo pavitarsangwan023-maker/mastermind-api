@@ -251,11 +251,8 @@ JSON Response Schema:
   "themeName": null
 }`;
 
-    // Model list — fastest first
     const models = [
-      { api: 'v1beta', name: 'gemini-2.0-flash-lite' },
-      { api: 'v1beta', name: 'gemini-2.0-flash' },
-      { api: 'v1beta', name: 'gemini-1.5-flash' },
+      { api: 'v1beta', name: 'gemini-1.5-flash' }, // Very fast, reliable, current
       { api: 'v1beta', name: 'gemini-1.5-pro' }
     ];
 
