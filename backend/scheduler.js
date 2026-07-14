@@ -63,7 +63,7 @@ const startScheduler = () => {
     } catch (error) {
       console.error("[Scheduler Error]", error);
     }
-  }, 60000); 
+  }, 5000); 
 };
 
 // Generates a smart, context-aware spoken message based on the task
