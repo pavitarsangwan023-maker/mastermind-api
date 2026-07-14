@@ -138,7 +138,7 @@ app.post('/api/ai/chat', async (req, res) => {
     // 1. STOP command
     if (lowerText.match(/^(stop|chup|band kar|ruko|hatao|ruk|chup ho|बंद|चुप|रुक|स्टॉप)$/i) || 
         (lowerText.split(' ').length <= 4 && lowerText.match(/(stop|chup|band|hatao|ruk)/))) {
-      return res.json({ success: true, aiResponse: "ठीक है सर, मैंने बंद कर दिया है।", action: "STOP_MUSIC" });
+      return res.json({ success: true, aiResponse: "Thik hai Sir, maine band kar diya hai.", action: "STOP_MUSIC" });
     }
 
     // 2. FAST TIME
@@ -146,8 +146,8 @@ app.post('/api/ai/chat', async (req, res) => {
       const now = new Date();
       let h = now.getHours() % 12 || 12;
       let m = now.getMinutes().toString().padStart(2, '0');
-      const ampm = now.getHours() >= 12 ? 'दोपहर के' : 'सुबह के'; // rough mapping for better TTS
-      return res.json({ success: true, aiResponse: `${userTitle || 'सर'}, अभी ${h} बज कर ${m} मिनट हुए हैं।`, action: "CHAT" });
+      const ampm = now.getHours() >= 12 ? 'PM' : 'AM';
+      return res.json({ success: true, aiResponse: `${userTitle || 'Sir'}, abhi ${h} baj kar ${m} minute hue hain.`, action: "CHAT" });
     }
 
     // 3. FAST REMINDER
@@ -160,10 +160,10 @@ app.post('/api/ai/chat', async (req, res) => {
         const num = parseInt(tMatch[1]);
         const rawUnit = tMatch[2].toLowerCase();
         let delayMs = 0;
-        let unitLabelHindi = '';
-        if (rawUnit.match(/^sec|सेकंड/)) { delayMs = num * 1000; unitLabelHindi = 'सेकंड'; }
-        else if (rawUnit.match(/^min|मिनट/)) { delayMs = num * 60 * 1000; unitLabelHindi = 'मिनट'; }
-        else if (rawUnit.match(/^h|घंट/)) { delayMs = num * 3600 * 1000; unitLabelHindi = 'घंटे'; }
+        let unitLabelHinglish = '';
+        if (rawUnit.match(/^sec|सेकंड/)) { delayMs = num * 1000; unitLabelHinglish = 'second'; }
+        else if (rawUnit.match(/^min|मिनट/)) { delayMs = num * 60 * 1000; unitLabelHinglish = 'minute'; }
+        else if (rawUnit.match(/^h|घंट/)) { delayMs = num * 3600 * 1000; unitLabelHinglish = 'ghante'; }
         
         if (delayMs > 0) {
           if (email) {
@@ -175,7 +175,7 @@ app.post('/api/ai/chat', async (req, res) => {
 
           return res.json({
             success: true,
-            aiResponse: `बिल्कुल ${userTitle || 'सर'}! मैं आपको ${num} ${unitLabelHindi} बाद याद दिला दूंगी। आप अपना काम कीजिये, मैं एकदम सही समय पर आपको बता दूंगी।`,
+            aiResponse: `Bilkul ${userTitle || 'Sir'}! Main aapko ${num} ${unitLabelHinglish} baad yaad dila dungi. Aap apna kaam kijiye, main sahi time par bolungi.`,
             action: "REMINDER",
             reminderDelayMs: delayMs
           });
