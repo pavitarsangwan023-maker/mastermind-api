@@ -33,6 +33,25 @@ const User = require('./models/User');
 const Reminder = require('./models/Reminder');
 
 // ============================================================
+// MUSIC SEARCH ROUTE
+// ============================================================
+app.post('/api/music/search', async (req, res) => {
+  const { query } = req.body;
+  if (!query) return res.status(400).json({ success: false, error: 'Missing query' });
+  try {
+    const ytSearch = require('yt-search');
+    const result = await ytSearch(query);
+    if (result?.videos?.length > 0) {
+      const v = result.videos[0];
+      return res.json({ success: true, videoId: v.videoId, title: v.title, url: v.url });
+    }
+    res.json({ success: false, error: 'No results found' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ============================================================
 // ROUTES
 // ============================================================
 app.post('/api/secrets', async (req, res) => {
