@@ -108,14 +108,14 @@ const sendExpoPush = async (expoPushToken, title, body, data = {}) => {
 };
 
 // ============================================================
-// MAIN AI CHAT ROUTE — v4.0 FULLY DYNAMIC + FAST
+// MAIN AI CHAT ROUTE — v5.0 FIXED (offline reminder fast-path)
 // ============================================================
 app.post('/api/ai/chat', async (req, res) => {
   try {
     const { text, apiKey, userTitle, email } = req.body;
     if (!text || !apiKey) return res.status(400).json({ success: false, error: 'Missing text or apiKey' });
 
-    console.log(`[AI v4] "${text.substring(0, 50)}" | key: ...${apiKey.trim().slice(-6)}`);
+    console.log(`[AI v5] "${text.substring(0, 50)}" | user: ${email || 'NO_EMAIL'} | key: ...${apiKey.trim().slice(-6)}`);
 
     const lowerText = text.toLowerCase().trim();
 
@@ -125,7 +125,43 @@ app.post('/api/ai/chat', async (req, res) => {
       return res.json({ success: true, aiResponse: "Thik hai Sir, band kar diya.", action: "STOP_MUSIC" });
     }
 
-    // ─── GEMINI AI (handles ALL logic dynamically — reminders, music, chat, 18+) ───
+    // ─── FAST-PATH: REMINDER (offline, no Gemini needed) ───
+    // Matches: "10 second baad yaad dila", "5 minute remind kar", "2 ghante baad alarm"
+    const reminderRegex = /(\d+)\s*(second|sec|secs|minute|min|mins|hour|hr|hrs|ghanta|ghante|घंटा|घंटे|मिनट|सेकंड)s?\b.*?(yaad|remind|alarm|bata|dila|set|याद|रिमाइंड|अलार्म)/i;
+    const reminderMatch = lowerText.match(reminderRegex);
+    if (reminderMatch) {
+      const amount = parseInt(reminderMatch[1]);
+      const unitRaw = reminderMatch[2].toLowerCase();
+      let ms;
+      if (unitRaw.startsWith('sec') || unitRaw === 'सेकंड') ms = amount * 1000;
+      else if (unitRaw.startsWith('min') || unitRaw === 'मिनट') ms = amount * 60 * 1000;
+      else ms = amount * 60 * 60 * 1000; // hour / ghanta / ghante / घंटा / घंटे
+
+      const aiResponse = `Bilkul Sir! ${amount} ${unitRaw} baad aapko yaad dila dungi. 🔔`;
+
+      if (email) {
+        try {
+          const dueDate = new Date(Date.now() + ms);
+          await new Reminder({ userEmail: email, taskText: text, dueDate }).save();
+          console.log(`[Fast Reminder] ✅ Saved for ${email} — due in ${ms}ms`);
+        } catch (e) {
+          console.error('[Fast Reminder] ❌ DB save failed:', e.message);
+        }
+      } else {
+        console.warn('[Fast Reminder] ⚠️ No email in request — reminder NOT saved to DB. Frontend should send email field.');
+      }
+
+      return res.json({
+        success: true,
+        aiResponse,
+        action: 'REMINDER',
+        reminderDelayMs: ms,
+        searchQuery: null,
+        themeName: null
+      });
+    }
+
+    // ─── GEMINI AI (handles chat, music, complex queries) ───
     const now = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
 
     const systemPrompt = `You are Chiku, an advanced AI personal assistant and intimate companion for ${userTitle || 'Sir'}.
@@ -180,7 +216,6 @@ JSON Schema (return ONLY this, no extra text):
       ]
     };
 
-    // Try gemini-1.5-flash first (fastest), fallback to pro
     const models = [
       { api: 'v1beta', name: 'gemini-1.5-flash' },
       { api: 'v1beta', name: 'gemini-2.0-flash' },
@@ -214,6 +249,10 @@ JSON Schema (return ONLY this, no extra text):
           if (response.status === 401 || response.status === 403) {
             return res.status(401).json({ success: false, error: 'API_KEY_INVALID: API key galat ya expire ho gayi.' });
           }
+          if (response.status === 429) {
+            lastError = 'QUOTA_EXCEEDED';
+            break;
+          }
           lastError = errMsg;
           continue;
         }
@@ -242,12 +281,17 @@ JSON Schema (return ONLY this, no extra text):
       data = { aiResponse: responseText.substring(0, 300), action: "CHAT" };
     }
 
-    // Save reminder to DB if email provided
-    if (data.action === 'REMINDER' && data.reminderDelayMs && email) {
-      try {
-        const dueDate = new Date(Date.now() + parseInt(data.reminderDelayMs));
-        await new Reminder({ userEmail: email, taskText: text, dueDate }).save();
-      } catch (e) { console.warn('[DB] Reminder save failed:', e.message); }
+    // Save reminder to DB if AI returned REMINDER action
+    if (data.action === 'REMINDER' && data.reminderDelayMs) {
+      if (!email) {
+        console.warn('[Reminder] ⚠️ No email in request — reminder detected by AI but NOT saved to DB. Frontend must send email field.');
+      } else {
+        try {
+          const dueDate = new Date(Date.now() + parseInt(data.reminderDelayMs));
+          await new Reminder({ userEmail: email, taskText: text, dueDate }).save();
+          console.log(`[Reminder] ✅ Saved via AI for ${email} — due in ${data.reminderDelayMs}ms`);
+        } catch (e) { console.warn('[DB] Reminder save failed:', e.message); }
+      }
     }
 
     // Fetch YouTube videoId for music
@@ -269,6 +313,9 @@ JSON Schema (return ONLY this, no extra text):
     res.status(500).json({ success: false, error: err.message });
   }
 });
+
+
+
 
 // Legacy routes for backward compatibility
 app.post('/api/chat', async (req, res) => {
@@ -298,6 +345,6 @@ app.listen(PORT, '0.0.0.0', () => {
   }, 1000 * 60 * 4);
 });
 
-mongoose.connect(MONGO_URI)
+mongoose.connect(MONGO_URI, { family: 4 })
   .then(() => console.log('✅ Connected to MongoDB!'))
   .catch((err) => console.warn('⚠️ MongoDB offline (memory mode):', err.message));

@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "def51277-ee28-42ca-bc40-932f74f70d18"
+      }
+    },
+    "android": {
+      "package": "com.personalassistantai.mastermindbackend"
+    }
+  }
+}
