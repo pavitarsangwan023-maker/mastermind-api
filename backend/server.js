@@ -12,7 +12,7 @@ app.use(cors({ origin: true }));
 // HEALTH CHECK
 // ============================================================
 app.get('/', (req, res) => {
-  res.json({ message: 'Mastermind Backend v5.1 is live! 🚀 (Offline Reminders + API Key Bug Fixed)', version: '5.1' });
+  res.json({ message: 'Mastermind Backend v5.2 is live! 🚀 (Offline Reminders + Named Groups Bug Fix)', version: '5.2' });
 });
 
 // ============================================================
@@ -127,22 +127,21 @@ app.post('/api/ai/chat', async (req, res) => {
 
     // ─── FAST-PATH: REMINDER (offline, no Gemini needed) ───
     const strictTrigger = `(yaad\\s*dila|remind\\s*(me|kar)|alarm\\s*(laga|lagao|set)|set\\s*(alarm|reminder)|याद\\s*दिला|रिमाइंड\\s*कर|अलार्म\\s*लगा)`;
-    const timeUnit = `(second|sec|secs|minute|min|mins|hour|hr|hrs|ghanta|ghante|घंटा|घंटे|मिनट|सेकंड)s?\\b`;
+    const timeUnit = `(?<unit>second|sec|secs|minute|min|mins|hour|hr|hrs|ghanta|ghante|घंटा|घंटे|मिनट|सेकंड)s?\\b`;
     
     // Pattern 1: "10 minute baad yaad dila" (Time first, trigger later)
-    const regexTimeFirst = new RegExp(`(\\d+)\\s*${timeUnit}.*?${strictTrigger}`, 'i');
+    const regexTimeFirst = new RegExp(`(?<amount>\\d+)\\s*${timeUnit}.*?${strictTrigger}`, 'i');
     // Pattern 2: "Remind me in 10 minutes" (Trigger first, time later)
-    const regexTriggerFirst = new RegExp(`${strictTrigger}.*?(\\d+)\\s*${timeUnit}`, 'i');
+    const regexTriggerFirst = new RegExp(`${strictTrigger}.*?(?<amount>\\d+)\\s*${timeUnit}`, 'i');
 
     const matchTimeFirst = lowerText.match(regexTimeFirst);
     const matchTriggerFirst = lowerText.match(regexTriggerFirst);
     
     const reminderMatch = matchTimeFirst || matchTriggerFirst;
 
-    if (reminderMatch) {
-      // Determine indices based on which pattern matched
-      const amount = parseInt(matchTimeFirst ? reminderMatch[1] : reminderMatch[4]);
-      const unitRaw = (matchTimeFirst ? reminderMatch[2] : reminderMatch[5]).toLowerCase();
+    if (reminderMatch && reminderMatch.groups) {
+      const amount = parseInt(reminderMatch.groups.amount);
+      const unitRaw = reminderMatch.groups.unit.toLowerCase();
       
       let ms;
       if (unitRaw.startsWith('sec') || unitRaw === 'सेकंड') ms = amount * 1000;
