@@ -108,14 +108,14 @@ const sendExpoPush = async (expoPushToken, title, body, data = {}) => {
 };
 
 // ============================================================
-// MAIN AI CHAT ROUTE — v5.0 FIXED (offline reminder fast-path)
+// MAIN AI CHAT ROUTE — v5.1 OFFLINE FAST-PATHS
 // ============================================================
 app.post('/api/ai/chat', async (req, res) => {
   try {
     const { text, apiKey, userTitle, email } = req.body;
-    if (!text || !apiKey) return res.status(400).json({ success: false, error: 'Missing text or apiKey' });
+    if (!text) return res.status(400).json({ success: false, error: 'Missing text' });
 
-    console.log(`[AI v5] "${text.substring(0, 50)}" | user: ${email || 'NO_EMAIL'} | key: ...${apiKey.trim().slice(-6)}`);
+    console.log(`[AI v5.1] "${text.substring(0, 50)}" | user: ${email || 'NO_EMAIL'} | key: ${apiKey ? 'PRESENT' : 'MISSING'}`);
 
     const lowerText = text.toLowerCase().trim();
 
@@ -126,12 +126,24 @@ app.post('/api/ai/chat', async (req, res) => {
     }
 
     // ─── FAST-PATH: REMINDER (offline, no Gemini needed) ───
-    // Matches: "10 second baad yaad dila", "5 minute remind kar", "2 ghante baad alarm"
-    const reminderRegex = /(\d+)\s*(second|sec|secs|minute|min|mins|hour|hr|hrs|ghanta|ghante|घंटा|घंटे|मिनट|सेकंड)s?\b.*?(yaad|remind|alarm|bata|dila|set|याद|रिमाइंड|अलार्म)/i;
-    const reminderMatch = lowerText.match(reminderRegex);
+    const strictTrigger = `(yaad\\s*dila|remind\\s*(me|kar)|alarm\\s*(laga|lagao|set)|set\\s*(alarm|reminder)|याद\\s*दिला|रिमाइंड\\s*कर|अलार्म\\s*लगा)`;
+    const timeUnit = `(second|sec|secs|minute|min|mins|hour|hr|hrs|ghanta|ghante|घंटा|घंटे|मिनट|सेकंड)s?\\b`;
+    
+    // Pattern 1: "10 minute baad yaad dila" (Time first, trigger later)
+    const regexTimeFirst = new RegExp(`(\\d+)\\s*${timeUnit}.*?${strictTrigger}`, 'i');
+    // Pattern 2: "Remind me in 10 minutes" (Trigger first, time later)
+    const regexTriggerFirst = new RegExp(`${strictTrigger}.*?(\\d+)\\s*${timeUnit}`, 'i');
+
+    const matchTimeFirst = lowerText.match(regexTimeFirst);
+    const matchTriggerFirst = lowerText.match(regexTriggerFirst);
+    
+    const reminderMatch = matchTimeFirst || matchTriggerFirst;
+
     if (reminderMatch) {
-      const amount = parseInt(reminderMatch[1]);
-      const unitRaw = reminderMatch[2].toLowerCase();
+      // Determine indices based on which pattern matched
+      const amount = parseInt(matchTimeFirst ? reminderMatch[1] : reminderMatch[4]);
+      const unitRaw = (matchTimeFirst ? reminderMatch[2] : reminderMatch[5]).toLowerCase();
+      
       let ms;
       if (unitRaw.startsWith('sec') || unitRaw === 'सेकंड') ms = amount * 1000;
       else if (unitRaw.startsWith('min') || unitRaw === 'मिनट') ms = amount * 60 * 1000;
@@ -160,6 +172,9 @@ app.post('/api/ai/chat', async (req, res) => {
         themeName: null
       });
     }
+
+    // If we reach here, we actually need Gemini. Now we strictly check for apiKey.
+    if (!apiKey) return res.status(400).json({ success: false, error: 'Missing apiKey for full AI response' });
 
     // ─── GEMINI AI (handles chat, music, complex queries) ───
     const now = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
