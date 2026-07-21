@@ -12,7 +12,7 @@ app.use(cors({ origin: true }));
 // HEALTH CHECK
 // ============================================================
 app.get('/', (req, res) => {
-  res.json({ message: 'Mastermind Backend v4.0 is live! 🚀', version: '4.0' });
+  res.json({ message: 'Mastermind Backend v5.0 is live! 🚀 (Offline Reminders Active)', version: '5.0' });
 });
 
 // ============================================================
