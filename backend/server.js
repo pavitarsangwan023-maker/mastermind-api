@@ -75,14 +75,37 @@ app.get('/api/secrets', async (req, res) => {
 
 app.post('/api/user/token', async (req, res) => {
   const { email, expoPushToken } = req.body;
-  if (!email || !expoPushToken) return res.status(400).json({ success: false, error: 'Missing data' });
+  if (!email || !expoPushToken) return res.status(400).json({ error: 'Missing email or token' });
+
   try {
     let user = await User.findOne({ email });
     if (!user) user = new User({ email, expoPushToken });
     else user.expoPushToken = expoPushToken;
     await user.save();
-    res.json({ success: true, message: 'Push token registered.' });
-  } catch (err) { res.status(500).json({ success: false, error: err.message }); }
+    res.json({ success: true, message: 'Push token saved successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── ADD MANUAL REMINDER FROM SCREEN ───
+app.post('/api/reminders/add', async (req, res) => {
+  const { email, taskText, dueDate } = req.body;
+  if (!email || !taskText || !dueDate) return res.status(400).json({ error: 'Missing fields' });
+  
+  try {
+    const newReminder = new Reminder({
+      userEmail: email,
+      taskText: taskText,
+      dueDate: new Date(dueDate)
+    });
+    await newReminder.save();
+    console.log(`[Manual Reminder] ✅ Saved for ${email} — due at ${new Date(dueDate).toLocaleString()}`);
+    res.json({ success: true, message: 'Reminder saved in DB' });
+  } catch (err) {
+    console.error('[Manual Reminder] ❌ DB save failed:', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/quota', (req, res) => {
